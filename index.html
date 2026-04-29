@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pickleball Doubles Scoreboard</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #eff0e2;
+      --accent: #38bdf8;
+      --accent2: #a78bfa;
+      --danger: #f43f5e;
+      --success: #22c55e;
+      --muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #020617, #0f172a);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .layout {
+      width: min(1100px, 100%);
+      display: grid;
+      grid-template-columns: 1fr 1.3fr 1fr;
+      gap: 16px;
+    }
+
+    .panel {
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-height: 500px;
+      justify-content: center;
+    }
+
+    .panel h2 {
+      margin: 0;
+      text-align: center;
+      font-size: 28px;
+    }
+
+    .players {
+      display: grid;
+      gap: 10px;
+    }
+
+    .players label {
+      display: grid;
+      gap: 4px;
+      color: #cbd5e1;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .players input {
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.7);
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 16px;
+    }
+
+    .panel.serving-turn {
+      border-color: rgba(244, 63, 94, 0.9);
+      box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.2);
+    }
+
+    .btn {
+      border: none;
+      border-radius: 14px;
+      padding: 20px 12px;
+      font-size: clamp(20px, 3vw, 32px);
+      font-weight: 700;
+      cursor: pointer;
+      color: rgb(255, 255, 255);
+      transition: transform 0.15s ease, filter 0.15s ease;
+      min-height: 130px;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.08);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-serve {
+      background: linear-gradient(180deg, var(--accent), #0ea5e9);
+    }
+
+    .btn-serve.current-serve {
+      background: linear-gradient(180deg, #fb7185, var(--danger));
+    }
+
+    .btn-score {
+      background: linear-gradient(180deg, var(--success), #16a34a);
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      filter: none;
+    }
+
+    .center {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      min-height: 500px;
+    }
+
+    .score {
+      font-size: clamp(52px, 12vw, 130px);
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-align: center;
+      padding: 8px 16px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(56, 189, 248, 0.15), rgba(167, 139, 250, 0.15));
+      width: 100%;
+    }
+
+    .status {
+      text-align: center;
+      font-size: clamp(16px, 2.2vw, 22px);
+      color: var(--muted);
+      min-height: 30px;
+    }
+
+    .meta {
+      text-align: center;
+      line-height: 1.55;
+      color: #cbd5e1;
+      font-size: 18px;
+    }
+
+    .server-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fda4af;
+      text-align: center;
+      min-height: 28px;
+    }
+
+    .reset {
+      margin-top: 8px;
+      border: none;
+      border-radius: 10px;
+      background: var(--danger);
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 700;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+
+    .reset:hover {
+      filter: brightness(1.08);
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .panel,
+      .center {
+        min-height: auto;
+      }
+
+      .btn {
+        min-height: 88px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <section class="panel" id="team1Panel">
+      <h2>Team 1</h2>
+      <div class="players">
+        <label>
+          Player 1
+          <input id="team1Player1" type="text" value="Player 1">
+        </label>
+        <label>
+          Player 2
+          <input id="team1Player2" type="text" value="Player 2">
+        </label>
+      </div>
+      <button class="btn btn-serve" id="team1ServeBtn">Serve</button>
+      <button class="btn btn-score" id="team1ScoreBtn">Score</button>
+      <button class="btn" id="undoBtnLeft">Undo</button>
+    </section>
+
+    <main class="center">
+      <div class="score" id="scoreDisplay">0-0-2</div>
+      <div class="status" id="statusText">Select a team to start serving.</div>
+      <div class="server-name" id="serverNameText"></div>
+      <div class="meta" id="metaText">
+        Format: Serving Score - Receiving Score - Server Number
+      </div>
+      <button class="reset" id="resetBtn">Reset Game</button>
+    </main>
+
+    <section class="panel" id="team2Panel">
+      <h2>Team 2</h2>
+      <div class="players">
+        <label>
+          Player 1
+          <input id="team2Player1" type="text" value="Player 1">
+        </label>
+        <label>
+          Player 2
+          <input id="team2Player2" type="text" value="Player 2">
+        </label>
+      </div>
+      <button class="btn btn-serve" id="team2ServeBtn">Serve</button>
+      <button class="btn btn-score" id="team2ScoreBtn">Score</button>
+      <button class="btn" id="undoBtnRight">Undo</button>
+    </section>
+  </div>
+
+  <script>
+    const state = {
+      team1Score: 0,
+      team2Score: 0,
+      servingTeam: null,
+      serverNumber: 2,
+      initialSingleServerActive: false
+    };
+    const history = [];
+
+    const scoreDisplay = document.getElementById("scoreDisplay");
+    const statusText = document.getElementById("statusText");
+    const serverNameText = document.getElementById("serverNameText");
+    const metaText = document.getElementById("metaText");
+    const team1Panel = document.getElementById("team1Panel");
+    const team2Panel = document.getElementById("team2Panel");
+    const team1ServeBtn = document.getElementById("team1ServeBtn");
+    const team2ServeBtn = document.getElementById("team2ServeBtn");
+    const team1Player1Input = document.getElementById("team1Player1");
+    const team1Player2Input = document.getElementById("team1Player2");
+    const team2Player1Input = document.getElementById("team2Player1");
+    const team2Player2Input = document.getElementById("team2Player2");
+    const undoBtnLeft = document.getElementById("undoBtnLeft");
+    const undoBtnRight = document.getElementById("undoBtnRight");
+
+    team1ServeBtn.addEventListener("click", () => setServingTeam(1));
+    team2ServeBtn.addEventListener("click", () => setServingTeam(2));
+    document.getElementById("team1ScoreBtn").addEventListener("click", () => awardPoint(1));
+    document.getElementById("team2ScoreBtn").addEventListener("click", () => awardPoint(2));
+    document.getElementById("resetBtn").addEventListener("click", resetGame);
+    undoBtnLeft.addEventListener("click", undoLastPoint);
+    undoBtnRight.addEventListener("click", undoLastPoint);
+    team1Player1Input.addEventListener("input", render);
+    team1Player2Input.addEventListener("input", render);
+    team2Player1Input.addEventListener("input", render);
+    team2Player2Input.addEventListener("input", render);
+
+    function setServingTeam(team) {
+      if (state.servingTeam) {
+        return;
+      }
+
+      state.servingTeam = team;
+      state.serverNumber = 2;
+      state.initialSingleServerActive = true;
+      render();
+      statusText.textContent = `Team ${team} starts serving (Server 2 only for the first turn).`;
+    }
+
+    function awardPoint(teamScored) {
+      if (!state.servingTeam) {
+        statusText.textContent = "Please choose a serving team first using Serve.";
+        return;
+      }
+
+      history.push({
+        team1Score: state.team1Score,
+        team2Score: state.team2Score,
+        servingTeam: state.servingTeam,
+        serverNumber: state.serverNumber,
+        initialSingleServerActive: state.initialSingleServerActive,
+        statusText: statusText.textContent
+      });
+
+      const servingTeam = state.servingTeam;
+
+      if (teamScored === servingTeam) {
+        // Only the serving team can score.
+        if (teamScored === 1) {
+          state.team1Score += 1;
+        } else {
+          state.team2Score += 1;
+        }
+        statusText.textContent = `Team ${teamScored} won while serving. Continue with Server ${state.serverNumber}.`;
+      } else if (state.initialSingleServerActive) {
+        // The starting team serves with only one server in the first service turn.
+        state.servingTeam = teamScored;
+        state.serverNumber = 1;
+        state.initialSingleServerActive = false;
+        statusText.textContent = `Side out! Team ${teamScored} now serves with Server 1.`;
+      } else if (state.serverNumber === 1) {
+        // Receiving team won while Server 1 served: move to Server 2.
+        state.serverNumber = 2;
+        statusText.textContent = `Team ${teamScored} won the rally. ${labelTeam(servingTeam)} switches to Server 2.`;
+      } else {
+        // Receiving team won while Server 2 served: side out to opponent with Server 1.
+        state.servingTeam = teamScored;
+        state.serverNumber = 1;
+        state.initialSingleServerActive = false;
+        statusText.textContent = `Side out! Team ${teamScored} now serves with Server 1.`;
+      }
+
+      render();
+    }
+
+    function undoLastPoint() {
+      const previous = history.pop();
+      if (!previous) {
+        statusText.textContent = "No previous score action to undo.";
+        return;
+      }
+
+      state.team1Score = previous.team1Score;
+      state.team2Score = previous.team2Score;
+      state.servingTeam = previous.servingTeam;
+      state.serverNumber = previous.serverNumber;
+      state.initialSingleServerActive = previous.initialSingleServerActive;
+      render();
+      statusText.textContent = previous.statusText || "Restored previous score state.";
+    }
+
+    function labelTeam(team) {
+      return `Team ${team}`;
+    }
+
+    function getPlayerName(team, playerIndex) {
+      const fallback = playerIndex === 1 ? "Player 1" : "Player 2";
+      const value = team === 1
+        ? (playerIndex === 1 ? team1Player1Input.value : team1Player2Input.value)
+        : (playerIndex === 1 ? team2Player1Input.value : team2Player2Input.value);
+
+      const trimmed = value.trim();
+      return trimmed || fallback;
+    }
+
+    function render() {
+      let servingScore;
+      let receivingScore;
+
+      if (!state.servingTeam || state.servingTeam === 1) {
+        servingScore = state.team1Score;
+        receivingScore = state.team2Score;
+      } else {
+        servingScore = state.team2Score;
+        receivingScore = state.team1Score;
+      }
+
+      const displayedServerNumber = state.servingTeam ? state.serverNumber : 2;
+      scoreDisplay.textContent = `${servingScore}-${receivingScore}-${displayedServerNumber}`;
+      metaText.textContent = state.servingTeam
+        ? `${labelTeam(state.servingTeam)} serving | ${labelTeam(state.servingTeam === 1 ? 2 : 1)} receiving`
+        : "Format: Serving Score - Receiving Score - Server Number";
+      serverNameText.textContent = state.servingTeam
+        ? `Current Server: ${getPlayerName(state.servingTeam, state.serverNumber)}`
+        : "";
+
+      const serveButtonsLocked = !!state.servingTeam;
+      team1ServeBtn.disabled = serveButtonsLocked;
+      team2ServeBtn.disabled = serveButtonsLocked;
+
+      team1Panel.classList.toggle("serving-turn", state.servingTeam === 1);
+      team2Panel.classList.toggle("serving-turn", state.servingTeam === 2);
+      team1ServeBtn.classList.toggle("current-serve", state.servingTeam === 1);
+      team2ServeBtn.classList.toggle("current-serve", state.servingTeam === 2);
+    }
+
+    function resetGame() {
+      state.team1Score = 0;
+      state.team2Score = 0;
+      state.servingTeam = null;
+      state.serverNumber = 2;
+      state.initialSingleServerActive = false;
+      history.length = 0;
+      render();
+      statusText.textContent = "Game reset. Select a team to start serving.";
+    }
+
+    render();
+  </script>
+</body>
+</html>
