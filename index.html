@@ -8,7 +8,7 @@
     :root {
       --bg: #0f172a;
       --card: #1e293b;
-      --text: #e2e8f0;
+      --text: #eff0e2;
       --accent: #38bdf8;
       --accent2: #a78bfa;
       --danger: #f43f5e;
@@ -57,6 +57,28 @@
       font-size: 28px;
     }
 
+    .players {
+      display: grid;
+      gap: 10px;
+    }
+
+    .players label {
+      display: grid;
+      gap: 4px;
+      color: #cbd5e1;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .players input {
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.7);
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 16px;
+    }
+
     .panel.serving-turn {
       border-color: rgba(244, 63, 94, 0.9);
       box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.2);
@@ -69,7 +91,7 @@
       font-size: clamp(20px, 3vw, 32px);
       font-weight: 700;
       cursor: pointer;
-      color: white;
+      color: rgb(255, 255, 255);
       transition: transform 0.15s ease, filter 0.15s ease;
       min-height: 130px;
     }
@@ -140,12 +162,20 @@
       font-size: 18px;
     }
 
+    .server-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fda4af;
+      text-align: center;
+      min-height: 28px;
+    }
+
     .reset {
       margin-top: 8px;
       border: none;
       border-radius: 10px;
       background: var(--danger);
-      color: #fff;
+      color: #ffffff;
       font-size: 18px;
       font-weight: 700;
       padding: 10px 20px;
@@ -176,13 +206,25 @@
   <div class="layout">
     <section class="panel" id="team1Panel">
       <h2>Team 1</h2>
+      <div class="players">
+        <label>
+          Player 1
+          <input id="team1Player1" type="text" value="Player 1">
+        </label>
+        <label>
+          Player 2
+          <input id="team1Player2" type="text" value="Player 2">
+        </label>
+      </div>
       <button class="btn btn-serve" id="team1ServeBtn">Serve</button>
       <button class="btn btn-score" id="team1ScoreBtn">Score</button>
+      <button class="btn" id="undoBtnLeft">Undo</button>
     </section>
 
     <main class="center">
       <div class="score" id="scoreDisplay">0-0-2</div>
       <div class="status" id="statusText">Select a team to start serving.</div>
+      <div class="server-name" id="serverNameText"></div>
       <div class="meta" id="metaText">
         Format: Serving Score - Receiving Score - Server Number
       </div>
@@ -191,8 +233,19 @@
 
     <section class="panel" id="team2Panel">
       <h2>Team 2</h2>
+      <div class="players">
+        <label>
+          Player 1
+          <input id="team2Player1" type="text" value="Player 1">
+        </label>
+        <label>
+          Player 2
+          <input id="team2Player2" type="text" value="Player 2">
+        </label>
+      </div>
       <button class="btn btn-serve" id="team2ServeBtn">Serve</button>
       <button class="btn btn-score" id="team2ScoreBtn">Score</button>
+      <button class="btn" id="undoBtnRight">Undo</button>
     </section>
   </div>
 
@@ -204,20 +257,34 @@
       serverNumber: 2,
       initialSingleServerActive: false
     };
+    const history = [];
 
     const scoreDisplay = document.getElementById("scoreDisplay");
     const statusText = document.getElementById("statusText");
+    const serverNameText = document.getElementById("serverNameText");
     const metaText = document.getElementById("metaText");
     const team1Panel = document.getElementById("team1Panel");
     const team2Panel = document.getElementById("team2Panel");
     const team1ServeBtn = document.getElementById("team1ServeBtn");
     const team2ServeBtn = document.getElementById("team2ServeBtn");
+    const team1Player1Input = document.getElementById("team1Player1");
+    const team1Player2Input = document.getElementById("team1Player2");
+    const team2Player1Input = document.getElementById("team2Player1");
+    const team2Player2Input = document.getElementById("team2Player2");
+    const undoBtnLeft = document.getElementById("undoBtnLeft");
+    const undoBtnRight = document.getElementById("undoBtnRight");
 
     team1ServeBtn.addEventListener("click", () => setServingTeam(1));
     team2ServeBtn.addEventListener("click", () => setServingTeam(2));
     document.getElementById("team1ScoreBtn").addEventListener("click", () => awardPoint(1));
     document.getElementById("team2ScoreBtn").addEventListener("click", () => awardPoint(2));
     document.getElementById("resetBtn").addEventListener("click", resetGame);
+    undoBtnLeft.addEventListener("click", undoLastPoint);
+    undoBtnRight.addEventListener("click", undoLastPoint);
+    team1Player1Input.addEventListener("input", render);
+    team1Player2Input.addEventListener("input", render);
+    team2Player1Input.addEventListener("input", render);
+    team2Player2Input.addEventListener("input", render);
 
     function setServingTeam(team) {
       if (state.servingTeam) {
@@ -236,6 +303,15 @@
         statusText.textContent = "Please choose a serving team first using Serve.";
         return;
       }
+
+      history.push({
+        team1Score: state.team1Score,
+        team2Score: state.team2Score,
+        servingTeam: state.servingTeam,
+        serverNumber: state.serverNumber,
+        initialSingleServerActive: state.initialSingleServerActive,
+        statusText: statusText.textContent
+      });
 
       const servingTeam = state.servingTeam;
 
@@ -268,8 +344,34 @@
       render();
     }
 
+    function undoLastPoint() {
+      const previous = history.pop();
+      if (!previous) {
+        statusText.textContent = "No previous score action to undo.";
+        return;
+      }
+
+      state.team1Score = previous.team1Score;
+      state.team2Score = previous.team2Score;
+      state.servingTeam = previous.servingTeam;
+      state.serverNumber = previous.serverNumber;
+      state.initialSingleServerActive = previous.initialSingleServerActive;
+      render();
+      statusText.textContent = previous.statusText || "Restored previous score state.";
+    }
+
     function labelTeam(team) {
       return `Team ${team}`;
+    }
+
+    function getPlayerName(team, playerIndex) {
+      const fallback = playerIndex === 1 ? "Player 1" : "Player 2";
+      const value = team === 1
+        ? (playerIndex === 1 ? team1Player1Input.value : team1Player2Input.value)
+        : (playerIndex === 1 ? team2Player1Input.value : team2Player2Input.value);
+
+      const trimmed = value.trim();
+      return trimmed || fallback;
     }
 
     function render() {
@@ -289,6 +391,9 @@
       metaText.textContent = state.servingTeam
         ? `${labelTeam(state.servingTeam)} serving | ${labelTeam(state.servingTeam === 1 ? 2 : 1)} receiving`
         : "Format: Serving Score - Receiving Score - Server Number";
+      serverNameText.textContent = state.servingTeam
+        ? `Current Server: ${getPlayerName(state.servingTeam, state.serverNumber)}`
+        : "";
 
       const serveButtonsLocked = !!state.servingTeam;
       team1ServeBtn.disabled = serveButtonsLocked;
@@ -306,6 +411,7 @@
       state.servingTeam = null;
       state.serverNumber = 2;
       state.initialSingleServerActive = false;
+      history.length = 0;
       render();
       statusText.textContent = "Game reset. Select a team to start serving.";
     }
