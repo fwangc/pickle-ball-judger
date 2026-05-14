@@ -117,6 +117,11 @@
       background: linear-gradient(180deg, var(--success), #16a34a);
     }
 
+    .btn-undo {
+      background: linear-gradient(180deg, #fde047, #eab308);
+      color: #1a1a1a;
+    }
+
     .btn:disabled {
       opacity: 0.55;
       cursor: not-allowed;
@@ -200,6 +205,79 @@
         min-height: 88px;
       }
     }
+
+    #winOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.92);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    #fireworksCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .win-message {
+      position: relative;
+      z-index: 101;
+      text-align: center;
+      padding: 36px 56px;
+      background: rgba(30, 41, 59, 0.92);
+      border-radius: 24px;
+      border: 2px solid rgba(253, 224, 71, 0.7);
+      box-shadow: 0 0 60px rgba(253, 224, 71, 0.25);
+    }
+
+    .win-title {
+      font-size: clamp(36px, 8vw, 80px);
+      font-weight: 800;
+      color: #fde047;
+      margin: 0 0 8px;
+      text-shadow: 0 0 40px rgba(253, 224, 71, 0.9);
+    }
+
+    .win-players {
+      font-size: clamp(20px, 4vw, 36px);
+      color: #eff0e2;
+      margin: 0 0 8px;
+    }
+
+    .win-score {
+      font-size: clamp(16px, 2.5vw, 24px);
+      color: #94a3b8;
+      margin: 0 0 28px;
+    }
+
+    .play-again-btn {
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #fde047, #eab308);
+      color: #1a1a1a;
+      font-size: 22px;
+      font-weight: 700;
+      padding: 14px 40px;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    .play-again-btn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.08);
+    }
   </style>
 </head>
 <body>
@@ -218,7 +296,7 @@
       </div>
       <button class="btn btn-serve" id="team1ServeBtn">Serve</button>
       <button class="btn btn-score" id="team1ScoreBtn">Score</button>
-      <button class="btn" id="undoBtnLeft">Undo</button>
+      <button class="btn btn-undo" id="undoBtnLeft">Undo</button>
     </section>
 
     <main class="center">
@@ -245,8 +323,18 @@
       </div>
       <button class="btn btn-serve" id="team2ServeBtn">Serve</button>
       <button class="btn btn-score" id="team2ScoreBtn">Score</button>
-      <button class="btn" id="undoBtnRight">Undo</button>
+      <button class="btn btn-undo" id="undoBtnRight">Undo</button>
     </section>
+  </div>
+
+  <div id="winOverlay" style="display:none">
+    <canvas id="fireworksCanvas"></canvas>
+    <div class="win-message">
+      <div class="win-title" id="winTitle">Team 1 Wins!</div>
+      <div class="win-players" id="winPlayers"></div>
+      <div class="win-score" id="winScore"></div>
+      <button class="play-again-btn" id="playAgainBtn">Play Again</button>
+    </div>
   </div>
 
   <script>
@@ -255,7 +343,8 @@
       team2Score: 0,
       servingTeam: null,
       serverNumber: 2,
-      initialSingleServerActive: false
+      initialSingleServerActive: false,
+      gameOver: false
     };
     const history = [];
 
@@ -279,6 +368,7 @@
     document.getElementById("team1ScoreBtn").addEventListener("click", () => awardPoint(1));
     document.getElementById("team2ScoreBtn").addEventListener("click", () => awardPoint(2));
     document.getElementById("resetBtn").addEventListener("click", resetGame);
+    document.getElementById("playAgainBtn").addEventListener("click", resetGame);
     undoBtnLeft.addEventListener("click", undoLastPoint);
     undoBtnRight.addEventListener("click", undoLastPoint);
     team1Player1Input.addEventListener("input", render);
@@ -299,6 +389,7 @@
     }
 
     function awardPoint(teamScored) {
+      if (state.gameOver) return;
       if (!state.servingTeam) {
         statusText.textContent = "Please choose a serving team first using Serve.";
         return;
@@ -342,6 +433,33 @@
       }
 
       render();
+      checkWin();
+    }
+
+    function checkWin() {
+      const t1 = state.team1Score;
+      const t2 = state.team2Score;
+      const team1Wins = t1 >= 11 && t1 - t2 >= 2;
+      const team2Wins = t2 >= 11 && t2 - t1 >= 2;
+      if (team1Wins || team2Wins) {
+        const winner = team1Wins ? 1 : 2;
+        state.gameOver = true;
+        showWinScreen(winner);
+      }
+    }
+
+    function showWinScreen(team) {
+      const p1 = getPlayerName(team, 1);
+      const p2 = getPlayerName(team, 2);
+      const winScore = team === 1
+        ? `Final Score: ${state.team1Score} – ${state.team2Score}`
+        : `Final Score: ${state.team2Score} – ${state.team1Score}`;
+      document.getElementById("winTitle").textContent = `Team ${team} Wins!`;
+      document.getElementById("winPlayers").textContent = `${p1} & ${p2}`;
+      document.getElementById("winScore").textContent = winScore;
+      const overlay = document.getElementById("winOverlay");
+      overlay.style.display = "flex";
+      startFireworks();
     }
 
     function undoLastPoint() {
@@ -411,12 +529,115 @@
       state.servingTeam = null;
       state.serverNumber = 2;
       state.initialSingleServerActive = false;
+      state.gameOver = false;
       history.length = 0;
+      stopFireworks();
+      document.getElementById("winOverlay").style.display = "none";
       render();
       statusText.textContent = "Game reset. Select a team to start serving.";
     }
 
     render();
+
+    // ── Fireworks ─────────────────────────────────────────────────────────
+    const fwCanvas = document.getElementById("fireworksCanvas");
+    const fwCtx = fwCanvas.getContext("2d");
+    let fwAnimId = null;
+    let fwParticles = [];
+    const FW_COLORS = ["#fde047","#f43f5e","#38bdf8","#a78bfa","#22c55e","#fb923c","#ffffff","#fbbf24"];
+
+    function resizeFwCanvas() {
+      fwCanvas.width = window.innerWidth;
+      fwCanvas.height = window.innerHeight;
+    }
+
+    function makeBurst(x, y) {
+      const color = FW_COLORS[Math.floor(Math.random() * FW_COLORS.length)];
+      const count = 90 + Math.floor(Math.random() * 30);
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 / count) * i + (Math.random() - 0.5) * 0.3;
+        const speed = Math.random() * 5 + 1.5;
+        fwParticles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          alpha: 1,
+          size: Math.random() * 3 + 1,
+          color,
+          decay: Math.random() * 0.015 + 0.008,
+          gravity: 0.07
+        });
+      }
+    }
+
+    function launchRocket() {
+      const x = fwCanvas.width * (0.1 + Math.random() * 0.8);
+      const targetY = fwCanvas.height * (0.1 + Math.random() * 0.35);
+      const dist = fwCanvas.height - targetY;
+      const vy = -Math.sqrt(2 * 0.09 * dist);
+      fwParticles.push({
+        x, y: fwCanvas.height,
+        vx: (Math.random() - 0.5) * 2,
+        vy,
+        targetY,
+        alpha: 1,
+        size: 3,
+        color: FW_COLORS[Math.floor(Math.random() * FW_COLORS.length)],
+        decay: 0.012,
+        gravity: 0.09,
+        isRocket: true,
+        exploded: false
+      });
+    }
+
+    function animateFireworks() {
+      fwCtx.fillStyle = "rgba(2,6,23,0.18)";
+      fwCtx.fillRect(0, 0, fwCanvas.width, fwCanvas.height);
+
+      if (Math.random() < 0.045) launchRocket();
+
+      fwParticles = fwParticles.filter(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += p.gravity;
+        p.alpha -= p.decay;
+
+        if (p.isRocket && !p.exploded && p.y <= p.targetY) {
+          p.exploded = true;
+          makeBurst(p.x, p.y);
+          return false;
+        }
+
+        if (p.alpha <= 0) return false;
+
+        fwCtx.save();
+        fwCtx.globalAlpha = p.alpha;
+        fwCtx.fillStyle = p.color;
+        fwCtx.beginPath();
+        fwCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        fwCtx.fill();
+        fwCtx.restore();
+        return true;
+      });
+
+      fwAnimId = requestAnimationFrame(animateFireworks);
+    }
+
+    function startFireworks() {
+      resizeFwCanvas();
+      fwParticles = [];
+      fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
+      if (fwAnimId) cancelAnimationFrame(fwAnimId);
+      for (let i = 0; i < 6; i++) setTimeout(launchRocket, i * 180);
+      animateFireworks();
+    }
+
+    function stopFireworks() {
+      if (fwAnimId) { cancelAnimationFrame(fwAnimId); fwAnimId = null; }
+      fwParticles = [];
+    }
+
+    window.addEventListener("resize", () => { if (fwAnimId) resizeFwCanvas(); });
   </script>
 </body>
 </html>
