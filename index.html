@@ -257,18 +257,75 @@
     }
 
     @media (max-width: 900px) {
-      .layout {
-        grid-template-columns: 1fr;
+      body {
+        align-items: flex-start;
+        padding: 10px;
       }
 
-      .panel,
-      .center {
-        min-height: auto;
+      .layout {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+          "center center"
+          "team1  team2";
+        gap: 10px;
       }
+
+      #team1Panel { grid-area: team1; }
+      .center     { grid-area: center; }
+      #team2Panel { grid-area: team2; }
+
+      .panel {
+        min-height: auto;
+        padding: 10px;
+        gap: 8px;
+      }
+
+      .panel h2 { font-size: 20px; }
+
+      .players label { font-size: 10px; }
+      .players input { padding: 6px 8px; font-size: 12px; }
+
+      .court-view { padding: 6px; gap: 4px; }
+      .court-slot { min-height: 52px; padding: 5px 4px; }
+      .slot-label { font-size: 9px; letter-spacing: 1px; }
+      .slot-name  { font-size: 11px; }
+      .slot-serve { font-size: 9px; }
 
       .btn {
-        min-height: 88px;
+        min-height: 56px;
+        font-size: clamp(13px, 3.5vw, 20px);
+        padding: 10px 6px;
+        border-radius: 10px;
       }
+
+      .center {
+        min-height: auto;
+        padding: 14px;
+        gap: 10px;
+      }
+
+      .server-name { font-size: 14px; }
+      .meta        { font-size: 14px; }
+      .reset       { font-size: 15px; padding: 8px 16px; }
+
+      .win-message { padding: 24px 20px; }
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 6px; }
+
+      .layout { gap: 6px; }
+
+      .panel h2 { font-size: 16px; }
+
+      .btn {
+        min-height: 46px;
+        font-size: clamp(12px, 3.2vw, 16px);
+        padding: 8px 4px;
+      }
+
+      .court-slot { min-height: 44px; }
+      .slot-name  { font-size: 10px; }
     }
 
     #winOverlay {
