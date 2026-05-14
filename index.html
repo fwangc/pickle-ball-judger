@@ -46,7 +46,7 @@
       padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
       min-height: 500px;
       justify-content: center;
     }
@@ -59,14 +59,15 @@
 
     .players {
       display: grid;
-      gap: 10px;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
     }
 
     .players label {
       display: grid;
       gap: 4px;
       color: #cbd5e1;
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 700;
     }
 
@@ -75,8 +76,72 @@
       border-radius: 10px;
       background: rgba(15, 23, 42, 0.7);
       color: var(--text);
-      padding: 10px 12px;
-      font-size: 16px;
+      padding: 8px 10px;
+      font-size: 14px;
+      width: 100%;
+    }
+
+    /* Court position view */
+    .court-view {
+      display: flex;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 12px;
+      padding: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.15);
+    }
+
+    .court-slot {
+      flex: 1;
+      text-align: center;
+      padding: 8px 6px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      transition: background 0.2s, border-color 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      min-height: 68px;
+    }
+
+    .court-slot.is-serving {
+      background: rgba(244, 63, 94, 0.15);
+      border-color: rgba(244, 63, 94, 0.45);
+    }
+
+    .slot-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .slot-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #eff0e2;
+      word-break: break-word;
+      line-height: 1.3;
+    }
+
+    .slot-serve {
+      font-size: 11px;
+      font-weight: 700;
+      color: #fda4af;
+      visibility: hidden;
+    }
+
+    .court-slot.is-serving .slot-serve {
+      visibility: visible;
+    }
+
+    .court-divider {
+      width: 1px;
+      background: rgba(148, 163, 184, 0.2);
+      align-self: stretch;
     }
 
     .panel.serving-turn {
@@ -294,6 +359,19 @@
           <input id="team1Player2" type="text" value="Player 2">
         </label>
       </div>
+      <div class="court-view">
+        <div class="court-slot" id="team1RightSlot">
+          <div class="slot-label">RIGHT</div>
+          <div class="slot-name" id="team1RightName">Player 1</div>
+          <div class="slot-serve">▶ Serving</div>
+        </div>
+        <div class="court-divider"></div>
+        <div class="court-slot" id="team1LeftSlot">
+          <div class="slot-label">LEFT</div>
+          <div class="slot-name" id="team1LeftName">Player 2</div>
+          <div class="slot-serve">▶ Serving</div>
+        </div>
+      </div>
       <button class="btn btn-serve" id="team1ServeBtn">Serve</button>
       <button class="btn btn-score" id="team1ScoreBtn">Score</button>
       <button class="btn btn-undo" id="undoBtnLeft">Undo</button>
@@ -321,6 +399,19 @@
           <input id="team2Player2" type="text" value="Player 2">
         </label>
       </div>
+      <div class="court-view">
+        <div class="court-slot" id="team2RightSlot">
+          <div class="slot-label">RIGHT</div>
+          <div class="slot-name" id="team2RightName">Player 1</div>
+          <div class="slot-serve">▶ Serving</div>
+        </div>
+        <div class="court-divider"></div>
+        <div class="court-slot" id="team2LeftSlot">
+          <div class="slot-label">LEFT</div>
+          <div class="slot-name" id="team2LeftName">Player 2</div>
+          <div class="slot-serve">▶ Serving</div>
+        </div>
+      </div>
       <button class="btn btn-serve" id="team2ServeBtn">Serve</button>
       <button class="btn btn-score" id="team2ScoreBtn">Score</button>
       <button class="btn btn-undo" id="undoBtnRight">Undo</button>
@@ -342,7 +433,13 @@
       team1Score: 0,
       team2Score: 0,
       servingTeam: null,
-      serverNumber: 2,
+      // Which player number (1 or 2) is currently on the right side for each team
+      team1RightPlayer: 1,
+      team2RightPlayer: 1,
+      // Player number currently serving on the serving team
+      currentServerPlayer: null,
+      // Player number who started this service turn (Server 1); used to derive score display number
+      firstServerPlayer: null,
       initialSingleServerActive: false,
       gameOver: false
     };
@@ -360,8 +457,6 @@
     const team1Player2Input = document.getElementById("team1Player2");
     const team2Player1Input = document.getElementById("team2Player1");
     const team2Player2Input = document.getElementById("team2Player2");
-    const undoBtnLeft = document.getElementById("undoBtnLeft");
-    const undoBtnRight = document.getElementById("undoBtnRight");
 
     team1ServeBtn.addEventListener("click", () => setServingTeam(1));
     team2ServeBtn.addEventListener("click", () => setServingTeam(2));
@@ -369,23 +464,40 @@
     document.getElementById("team2ScoreBtn").addEventListener("click", () => awardPoint(2));
     document.getElementById("resetBtn").addEventListener("click", resetGame);
     document.getElementById("playAgainBtn").addEventListener("click", resetGame);
-    undoBtnLeft.addEventListener("click", undoLastPoint);
-    undoBtnRight.addEventListener("click", undoLastPoint);
+    document.getElementById("undoBtnLeft").addEventListener("click", undoLastPoint);
+    document.getElementById("undoBtnRight").addEventListener("click", undoLastPoint);
     team1Player1Input.addEventListener("input", render);
     team1Player2Input.addEventListener("input", render);
     team2Player1Input.addEventListener("input", render);
     team2Player2Input.addEventListener("input", render);
 
-    function setServingTeam(team) {
-      if (state.servingTeam) {
-        return;
+    function getTeamRightPlayer(team) {
+      return team === 1 ? state.team1RightPlayer : state.team2RightPlayer;
+    }
+
+    function flipTeamPositions(team) {
+      if (team === 1) {
+        state.team1RightPlayer = state.team1RightPlayer === 1 ? 2 : 1;
+      } else {
+        state.team2RightPlayer = state.team2RightPlayer === 1 ? 2 : 1;
       }
+    }
+
+    function courtSideOf(team, playerNum) {
+      return getTeamRightPlayer(team) === playerNum ? "right" : "left";
+    }
+
+    function setServingTeam(team) {
+      if (state.servingTeam) return;
 
       state.servingTeam = team;
-      state.serverNumber = 2;
+      // Right-court player serves first; first turn uses only this one server (Server 2 notation)
+      const rightPlayer = getTeamRightPlayer(team);
+      state.currentServerPlayer = rightPlayer;
+      state.firstServerPlayer = rightPlayer;
       state.initialSingleServerActive = true;
       render();
-      statusText.textContent = `Team ${team} starts serving (Server 2 only for the first turn).`;
+      statusText.textContent = `Team ${team} starts. ${getPlayerName(team, rightPlayer)} serves from the right (one server only this turn).`;
     }
 
     function awardPoint(teamScored) {
@@ -398,8 +510,11 @@
       history.push({
         team1Score: state.team1Score,
         team2Score: state.team2Score,
+        team1RightPlayer: state.team1RightPlayer,
+        team2RightPlayer: state.team2RightPlayer,
         servingTeam: state.servingTeam,
-        serverNumber: state.serverNumber,
+        currentServerPlayer: state.currentServerPlayer,
+        firstServerPlayer: state.firstServerPlayer,
         initialSingleServerActive: state.initialSingleServerActive,
         statusText: statusText.textContent
       });
@@ -407,33 +522,38 @@
       const servingTeam = state.servingTeam;
 
       if (teamScored === servingTeam) {
-        // Only the serving team can score.
-        if (teamScored === 1) {
-          state.team1Score += 1;
-        } else {
-          state.team2Score += 1;
-        }
-        statusText.textContent = `Team ${teamScored} won while serving. Continue with Server ${state.serverNumber}.`;
+        // Serving team scores: increment and both partners switch sides; same player keeps serving
+        if (teamScored === 1) state.team1Score++;
+        else state.team2Score++;
+        flipTeamPositions(servingTeam);
+        const side = courtSideOf(servingTeam, state.currentServerPlayer);
+        statusText.textContent = `Team ${teamScored} scored! Partners switched. ${getPlayerName(teamScored, state.currentServerPlayer)} serves from the ${side}.`;
       } else if (state.initialSingleServerActive) {
-        // The starting team serves with only one server in the first service turn.
-        state.servingTeam = teamScored;
-        state.serverNumber = 1;
+        // First turn of game: only one server, fault = immediate side-out
         state.initialSingleServerActive = false;
-        statusText.textContent = `Side out! Team ${teamScored} now serves with Server 1.`;
-      } else if (state.serverNumber === 1) {
-        // Receiving team won while Server 1 served: move to Server 2.
-        state.serverNumber = 2;
-        statusText.textContent = `Team ${teamScored} won the rally. ${labelTeam(servingTeam)} switches to Server 2.`;
+        performSideOut(teamScored);
+      } else if (state.currentServerPlayer === state.firstServerPlayer) {
+        // First server faulted: pass to partner (second server)
+        const secondServer = state.firstServerPlayer === 1 ? 2 : 1;
+        state.currentServerPlayer = secondServer;
+        const side = courtSideOf(servingTeam, secondServer);
+        statusText.textContent = `Fault. ${getPlayerName(servingTeam, secondServer)} now serves from the ${side} for Team ${servingTeam}.`;
       } else {
-        // Receiving team won while Server 2 served: side out to opponent with Server 1.
-        state.servingTeam = teamScored;
-        state.serverNumber = 1;
-        state.initialSingleServerActive = false;
-        statusText.textContent = `Side out! Team ${teamScored} now serves with Server 1.`;
+        // Second server faulted: side-out
+        performSideOut(teamScored);
       }
 
       render();
       checkWin();
+    }
+
+    function performSideOut(newServingTeam) {
+      state.servingTeam = newServingTeam;
+      state.initialSingleServerActive = false;
+      const rightPlayer = getTeamRightPlayer(newServingTeam);
+      state.currentServerPlayer = rightPlayer;
+      state.firstServerPlayer = rightPlayer;
+      statusText.textContent = `Side out! Team ${newServingTeam} serves. ${getPlayerName(newServingTeam, rightPlayer)} starts from the right.`;
     }
 
     function checkWin() {
@@ -442,9 +562,8 @@
       const team1Wins = t1 >= 11 && t1 - t2 >= 2;
       const team2Wins = t2 >= 11 && t2 - t1 >= 2;
       if (team1Wins || team2Wins) {
-        const winner = team1Wins ? 1 : 2;
         state.gameOver = true;
-        showWinScreen(winner);
+        showWinScreen(team1Wins ? 1 : 2);
       }
     }
 
@@ -457,8 +576,7 @@
       document.getElementById("winTitle").textContent = `Team ${team} Wins!`;
       document.getElementById("winPlayers").textContent = `${p1} & ${p2}`;
       document.getElementById("winScore").textContent = winScore;
-      const overlay = document.getElementById("winOverlay");
-      overlay.style.display = "flex";
+      document.getElementById("winOverlay").style.display = "flex";
       startFireworks();
     }
 
@@ -471,31 +589,40 @@
 
       state.team1Score = previous.team1Score;
       state.team2Score = previous.team2Score;
+      state.team1RightPlayer = previous.team1RightPlayer;
+      state.team2RightPlayer = previous.team2RightPlayer;
       state.servingTeam = previous.servingTeam;
-      state.serverNumber = previous.serverNumber;
+      state.currentServerPlayer = previous.currentServerPlayer;
+      state.firstServerPlayer = previous.firstServerPlayer;
       state.initialSingleServerActive = previous.initialSingleServerActive;
       render();
       statusText.textContent = previous.statusText || "Restored previous score state.";
     }
 
-    function labelTeam(team) {
-      return `Team ${team}`;
+    function getPlayerName(team, playerNum) {
+      const fallback = playerNum === 1 ? "Player 1" : "Player 2";
+      const value = team === 1
+        ? (playerNum === 1 ? team1Player1Input.value : team1Player2Input.value)
+        : (playerNum === 1 ? team2Player1Input.value : team2Player2Input.value);
+      return value.trim() || fallback;
     }
 
-    function getPlayerName(team, playerIndex) {
-      const fallback = playerIndex === 1 ? "Player 1" : "Player 2";
-      const value = team === 1
-        ? (playerIndex === 1 ? team1Player1Input.value : team1Player2Input.value)
-        : (playerIndex === 1 ? team2Player1Input.value : team2Player2Input.value);
+    function renderCourtView(team) {
+      const rightPlayer = getTeamRightPlayer(team);
+      const leftPlayer = rightPlayer === 1 ? 2 : 1;
 
-      const trimmed = value.trim();
-      return trimmed || fallback;
+      document.getElementById(`team${team}RightName`).textContent = getPlayerName(team, rightPlayer);
+      document.getElementById(`team${team}LeftName`).textContent = getPlayerName(team, leftPlayer);
+
+      const rightServing = state.servingTeam === team && state.currentServerPlayer === rightPlayer;
+      const leftServing = state.servingTeam === team && state.currentServerPlayer === leftPlayer;
+
+      document.getElementById(`team${team}RightSlot`).classList.toggle("is-serving", rightServing);
+      document.getElementById(`team${team}LeftSlot`).classList.toggle("is-serving", leftServing);
     }
 
     function render() {
-      let servingScore;
-      let receivingScore;
-
+      let servingScore, receivingScore;
       if (!state.servingTeam || state.servingTeam === 1) {
         servingScore = state.team1Score;
         receivingScore = state.team2Score;
@@ -504,14 +631,22 @@
         receivingScore = state.team1Score;
       }
 
-      const displayedServerNumber = state.servingTeam ? state.serverNumber : 2;
-      scoreDisplay.textContent = `${servingScore}-${receivingScore}-${displayedServerNumber}`;
+      // Server number: 2 before game starts or during initial single-server turn; 1 for first server, 2 for second
+      const serverNum = !state.servingTeam || state.initialSingleServerActive ? 2
+        : state.currentServerPlayer === state.firstServerPlayer ? 1 : 2;
+
+      scoreDisplay.textContent = `${servingScore}-${receivingScore}-${serverNum}`;
+
       metaText.textContent = state.servingTeam
-        ? `${labelTeam(state.servingTeam)} serving | ${labelTeam(state.servingTeam === 1 ? 2 : 1)} receiving`
+        ? `Team ${state.servingTeam} serving | Team ${state.servingTeam === 1 ? 2 : 1} receiving`
         : "Format: Serving Score - Receiving Score - Server Number";
+
       serverNameText.textContent = state.servingTeam
-        ? `Current Server: ${getPlayerName(state.servingTeam, state.serverNumber)}`
+        ? `Current Server: ${getPlayerName(state.servingTeam, state.currentServerPlayer)}`
         : "";
+
+      renderCourtView(1);
+      renderCourtView(2);
 
       const serveButtonsLocked = !!state.servingTeam;
       team1ServeBtn.disabled = serveButtonsLocked;
@@ -526,8 +661,11 @@
     function resetGame() {
       state.team1Score = 0;
       state.team2Score = 0;
+      state.team1RightPlayer = 1;
+      state.team2RightPlayer = 1;
       state.servingTeam = null;
-      state.serverNumber = 2;
+      state.currentServerPlayer = null;
+      state.firstServerPlayer = null;
       state.initialSingleServerActive = false;
       state.gameOver = false;
       history.length = 0;
@@ -578,8 +716,7 @@
       fwParticles.push({
         x, y: fwCanvas.height,
         vx: (Math.random() - 0.5) * 2,
-        vy,
-        targetY,
+        vy, targetY,
         alpha: 1,
         size: 3,
         color: FW_COLORS[Math.floor(Math.random() * FW_COLORS.length)],
@@ -607,7 +744,6 @@
           makeBurst(p.x, p.y);
           return false;
         }
-
         if (p.alpha <= 0) return false;
 
         fwCtx.save();
