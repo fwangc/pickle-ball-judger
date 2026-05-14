@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pickleball Doubles Scoreboard</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #eff0e2;
+      --accent: #38bdf8;
+      --accent2: #a78bfa;
+      --danger: #f43f5e;
+      --success: #22c55e;
+      --muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #020617, #0f172a);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .layout {
+      width: min(1100px, 100%);
+      display: grid;
+      grid-template-columns: 1fr 1.3fr 1fr;
+      gap: 16px;
+    }
+
+    .panel {
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 500px;
+      justify-content: center;
+    }
+
+    .panel h2 {
+      margin: 0;
+      text-align: center;
+      font-size: 28px;
+    }
+
+    .players {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .players label {
+      display: grid;
+      gap: 4px;
+      color: #cbd5e1;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .players input {
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.7);
+      color: var(--text);
+      padding: 8px 10px;
+      font-size: 14px;
+      width: 100%;
+    }
+
+    /* Court position view */
+    .court-view {
+      display: flex;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 12px;
+      padding: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.15);
+    }
+
+    .court-slot {
+      flex: 1;
+      text-align: center;
+      padding: 8px 6px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      transition: background 0.2s, border-color 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      min-height: 68px;
+    }
+
+    .court-slot.is-serving {
+      background: rgba(244, 63, 94, 0.15);
+      border-color: rgba(244, 63, 94, 0.45);
+    }
+
+    .slot-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .slot-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #eff0e2;
+      word-break: break-word;
+      line-height: 1.3;
+    }
+
+    .slot-serve {
+      font-size: 11px;
+      font-weight: 700;
+      color: #fda4af;
+      visibility: hidden;
+    }
+
+    .court-slot.is-serving .slot-serve {
+      visibility: visible;
+    }
+
+    .court-divider {
+      width: 1px;
+      background: rgba(148, 163, 184, 0.2);
+      align-self: stretch;
+    }
+
+    .panel.serving-turn {
+      border-color: rgba(244, 63, 94, 0.9);
+      box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.2);
+    }
+
+    .btn {
+      border: none;
+      border-radius: 14px;
+      padding: 20px 12px;
+      font-size: clamp(20px, 3vw, 32px);
+      font-weight: 700;
+      cursor: pointer;
+      color: rgb(255, 255, 255);
+      transition: transform 0.15s ease, filter 0.15s ease;
+      min-height: 130px;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.08);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-serve {
+      background: linear-gradient(180deg, var(--accent), #0ea5e9);
+    }
+
+    .btn-serve.current-serve {
+      background: linear-gradient(180deg, #fb7185, var(--danger));
+    }
+
+    .btn-score {
+      background: linear-gradient(180deg, var(--success), #16a34a);
+    }
+
+    .btn-undo {
+      background: linear-gradient(180deg, #fde047, #eab308);
+      color: #1a1a1a;
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      filter: none;
+    }
+
+    .center {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      min-height: 500px;
+    }
+
+    .score {
+      font-size: clamp(52px, 12vw, 130px);
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-align: center;
+      padding: 8px 16px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(56, 189, 248, 0.15), rgba(167, 139, 250, 0.15));
+      width: 100%;
+    }
+
+    .status {
+      text-align: center;
+      font-size: clamp(16px, 2.2vw, 22px);
+      color: var(--muted);
+      min-height: 30px;
+    }
+
+    .meta {
+      text-align: center;
+      line-height: 1.55;
+      color: #cbd5e1;
+      font-size: 18px;
+    }
+
+    .server-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fda4af;
+      text-align: center;
+      min-height: 28px;
+    }
+
+    .reset {
+      margin-top: 8px;
+      border: none;
+      border-radius: 10px;
+      background: var(--danger);
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 700;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+
+    .reset:hover {
+      filter: brightness(1.08);
+    }
+
+    @media (max-width: 900px) {
+      body {
+        align-items: flex-start;
+        padding: 10px;
+      }
+
+      .layout {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+          "center center"
+          "team1  team2";
+        gap: 10px;
+      }
+
+      #team1Panel { grid-area: team1; }
+      .center     { grid-area: center; }
+      #team2Panel { grid-area: team2; }
+
+      .panel {
+        min-height: auto;
+        padding: 10px;
+        gap: 8px;
+      }
+
+      .panel h2 { font-size: 20px; }
+
+      .players label { font-size: 10px; }
+      .players input { padding: 6px 8px; font-size: 12px; }
+
+      .court-view { padding: 6px; gap: 4px; }
+      .court-slot { min-height: 52px; padding: 5px 4px; }
+      .slot-label { font-size: 9px; letter-spacing: 1px; }
+      .slot-name  { font-size: 11px; }
+      .slot-serve { font-size: 9px; }
+
+      .btn {
+        min-height: 56px;
+        font-size: clamp(13px, 3.5vw, 20px);
+        padding: 10px 6px;
+        border-radius: 10px;
+      }
+
+      .center {
+        min-height: auto;
+        padding: 14px;
+        gap: 10px;
+      }
+
+      .server-name { font-size: 14px; }
+      .meta        { font-size: 14px; }
+      .reset       { font-size: 15px; padding: 8px 16px; }
+
+      .win-message { padding: 24px 20px; }
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 6px; }
+
+      .layout { gap: 6px; }
+
+      .panel h2 { font-size: 16px; }
+
+      .btn {
+        min-height: 46px;
+        font-size: clamp(12px, 3.2vw, 16px);
+        padding: 8px 4px;
+      }
+
+      .court-slot { min-height: 44px; }
+      .slot-name  { font-size: 10px; }
+    }
+
+    #winOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.92);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    #fireworksCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .win-message {
+      position: relative;
+      z-index: 101;
+      text-align: center;
+      padding: 36px 56px;
+      background: rgba(30, 41, 59, 0.92);
+      border-radius: 24px;
+      border: 2px solid rgba(253, 224, 71, 0.7);
+      box-shadow: 0 0 60px rgba(253, 224, 71, 0.25);
+    }
+
+    .win-title {
+      font-size: clamp(36px, 8vw, 80px);
+      font-weight: 800;
+      color: #fde047;
+      margin: 0 0 8px;
+      text-shadow: 0 0 40px rgba(253, 224, 71, 0.9);
+    }
+
+    .win-players {
+      font-size: clamp(20px, 4vw, 36px);
+      color: #eff0e2;
+      margin: 0 0 8px;
+    }
+
+    .win-score {
+      font-size: clamp(16px, 2.5vw, 24px);
+      color: #94a3b8;
+      margin: 0 0 28px;
+    }
+
+    .play-again-btn {
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #fde047, #eab308);
+      color: #1a1a1a;
+      font-size: 22px;
+      font-weight: 700;
+      padding: 14px 40px;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    .play-again-btn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.08);
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <section class="panel" id="team1Panel">
+      <h2>Team 1</h2>
+      <div class="players">
+        <label>
+          Player 1
+          <input id="team1Player1" type="text" value="Player 1">
+        </label>
+        <label>
+          Player 2
+          <input id="team1Player2" type="text" value="Player 2">
+        </label>
+      </div>
+      <div class="court-view">
+        <div class="court-slot" id="team1LeftSlot">
+          <div class="slot-label">LEFT</div>
+          <div class="slot-name" id="team1LeftName">Player 2</div>
+          <div class="slot-serve">▶ Serving</div>
+        </div>
+        <div class="court-divider"></div>
+        <div class="court-slot" id="team1RightSlot">
+          <div class="slot-label">RIGHT</div>
+          <div class="slot-name" id="team1RightName">Player 1</div>
+          <div class="slot-serve">▶ Serving</div>
+        </div>
+      </div>
+      <button class="btn btn-serve" id="team1ServeBtn">Serve</button>
+      <button class="btn btn-score" id="team1ScoreBtn">Score</button>
+      <button class="btn btn-undo" id="undoBtnLeft">Undo</button>
+    </section>
+
+    <main class="center">
+      <div class="score" id="scoreDisplay">0-0-2</div>
+      <div class="status" id="statusText">Select a team to start serving.</div>
+      <div class="server-name" id="serverNameText"></div>
+      <div class="meta" id="metaText">
+        Format: Serving Score - Receiving Score - Server Number
+      </div>
+      <button class="reset" id="resetBtn">Reset Game</button>
+    </main>
+
+    <section class="panel" id="team2Panel">
+      <h2>Team 2</h2>
+      <div class="players">
+        <label>
+          Player 1
+          <input id="team2Player1" type="text" value="Player 1">
+        </label>
+        <label>
+          Player 2
+          <input id="team2Player2" type="text" value="Player 2">
+        </label>
+      </div>
+      <div class="court-view">
+        <div class="court-slot" id="team2LeftSlot">
+          <div class="slot-label">LEFT</div>
+          <div class="slot-name" id="team2LeftName">Player 2</div>
+          <div class="slot-serve">▶ Serving</div>
+        </div>
+        <div class="court-divider"></div>
+        <div class="court-slot" id="team2RightSlot">
+          <div class="slot-label">RIGHT</div>
+          <div class="slot-name" id="team2RightName">Player 1</div>
+          <div class="slot-serve">▶ Serving</div>
+        </div>
+      </div>
+      <button class="btn btn-serve" id="team2ServeBtn">Serve</button>
+      <button class="btn btn-score" id="team2ScoreBtn">Score</button>
+      <button class="btn btn-undo" id="undoBtnRight">Undo</button>
+    </section>
+  </div>
+
+  <div id="winOverlay" style="display:none">
+    <canvas id="fireworksCanvas"></canvas>
+    <div class="win-message">
+      <div class="win-title" id="winTitle">Team 1 Wins!</div>
+      <div class="win-players" id="winPlayers"></div>
+      <div class="win-score" id="winScore"></div>
+      <button class="play-again-btn" id="playAgainBtn">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      team1Score: 0,
+      team2Score: 0,
+      servingTeam: null,
+      // Which player number (1 or 2) is currently on the right side for each team
+      team1RightPlayer: 1,
+      team2RightPlayer: 1,
+      // Player number currently serving on the serving team
+      currentServerPlayer: null,
+      // Player number who started this service turn (Server 1); used to derive score display number
+      firstServerPlayer: null,
+      initialSingleServerActive: false,
+      gameOver: false
+    };
+    const history = [];
+
+    const scoreDisplay = document.getElementById("scoreDisplay");
+    const statusText = document.getElementById("statusText");
+    const serverNameText = document.getElementById("serverNameText");
+    const metaText = document.getElementById("metaText");
+    const team1Panel = document.getElementById("team1Panel");
+    const team2Panel = document.getElementById("team2Panel");
+    const team1ServeBtn = document.getElementById("team1ServeBtn");
+    const team2ServeBtn = document.getElementById("team2ServeBtn");
+    const team1Player1Input = document.getElementById("team1Player1");
+    const team1Player2Input = document.getElementById("team1Player2");
+    const team2Player1Input = document.getElementById("team2Player1");
+    const team2Player2Input = document.getElementById("team2Player2");
+
+    team1ServeBtn.addEventListener("click", () => setServingTeam(1));
+    team2ServeBtn.addEventListener("click", () => setServingTeam(2));
+    document.getElementById("team1ScoreBtn").addEventListener("click", () => awardPoint(1));
+    document.getElementById("team2ScoreBtn").addEventListener("click", () => awardPoint(2));
+    document.getElementById("resetBtn").addEventListener("click", resetGame);
+    document.getElementById("playAgainBtn").addEventListener("click", resetGame);
+    document.getElementById("undoBtnLeft").addEventListener("click", undoLastPoint);
+    document.getElementById("undoBtnRight").addEventListener("click", undoLastPoint);
+    team1Player1Input.addEventListener("input", render);
+    team1Player2Input.addEventListener("input", render);
+    team2Player1Input.addEventListener("input", render);
+    team2Player2Input.addEventListener("input", render);
+
+    function getTeamRightPlayer(team) {
+      return team === 1 ? state.team1RightPlayer : state.team2RightPlayer;
+    }
+
+    function flipTeamPositions(team) {
+      if (team === 1) {
+        state.team1RightPlayer = state.team1RightPlayer === 1 ? 2 : 1;
+      } else {
+        state.team2RightPlayer = state.team2RightPlayer === 1 ? 2 : 1;
+      }
+    }
+
+    function courtSideOf(team, playerNum) {
+      return getTeamRightPlayer(team) === playerNum ? "right" : "left";
+    }
+
+    function setServingTeam(team) {
+      if (state.servingTeam) return;
+
+      state.servingTeam = team;
+      // Right-court player serves first; first turn uses only this one server (Server 2 notation)
+      const rightPlayer = getTeamRightPlayer(team);
+      state.currentServerPlayer = rightPlayer;
+      state.firstServerPlayer = rightPlayer;
+      state.initialSingleServerActive = true;
+      render();
+      statusText.textContent = `Team ${team} starts. ${getPlayerName(team, rightPlayer)} serves from the right (one server only this turn).`;
+    }
+
+    function awardPoint(teamScored) {
+      if (state.gameOver) return;
+      if (!state.servingTeam) {
+        statusText.textContent = "Please choose a serving team first using Serve.";
+        return;
+      }
+
+      history.push({
+        team1Score: state.team1Score,
+        team2Score: state.team2Score,
+        team1RightPlayer: state.team1RightPlayer,
+        team2RightPlayer: state.team2RightPlayer,
+        servingTeam: state.servingTeam,
+        currentServerPlayer: state.currentServerPlayer,
+        firstServerPlayer: state.firstServerPlayer,
+        initialSingleServerActive: state.initialSingleServerActive,
+        statusText: statusText.textContent
+      });
+
+      const servingTeam = state.servingTeam;
+
+      if (teamScored === servingTeam) {
+        // Serving team scores: increment and both partners switch sides; same player keeps serving
+        if (teamScored === 1) state.team1Score++;
+        else state.team2Score++;
+        flipTeamPositions(servingTeam);
+        const side = courtSideOf(servingTeam, state.currentServerPlayer);
+        statusText.textContent = `Team ${teamScored} scored! Partners switched. ${getPlayerName(teamScored, state.currentServerPlayer)} serves from the ${side}.`;
+      } else if (state.initialSingleServerActive) {
+        // First turn of game: only one server, fault = immediate side-out
+        state.initialSingleServerActive = false;
+        performSideOut(teamScored);
+      } else if (state.currentServerPlayer === state.firstServerPlayer) {
+        // First server faulted: pass to partner (second server)
+        const secondServer = state.firstServerPlayer === 1 ? 2 : 1;
+        state.currentServerPlayer = secondServer;
+        const side = courtSideOf(servingTeam, secondServer);
+        statusText.textContent = `Fault. ${getPlayerName(servingTeam, secondServer)} now serves from the ${side} for Team ${servingTeam}.`;
+      } else {
+        // Second server faulted: side-out
+        performSideOut(teamScored);
+      }
+
+      render();
+      checkWin();
+    }
+
+    function performSideOut(newServingTeam) {
+      state.servingTeam = newServingTeam;
+      state.initialSingleServerActive = false;
+      const rightPlayer = getTeamRightPlayer(newServingTeam);
+      state.currentServerPlayer = rightPlayer;
+      state.firstServerPlayer = rightPlayer;
+      statusText.textContent = `Side out! Team ${newServingTeam} serves. ${getPlayerName(newServingTeam, rightPlayer)} starts from the right.`;
+    }
+
+    function checkWin() {
+      const t1 = state.team1Score;
+      const t2 = state.team2Score;
+      const team1Wins = t1 >= 11 && t1 - t2 >= 2;
+      const team2Wins = t2 >= 11 && t2 - t1 >= 2;
+      if (team1Wins || team2Wins) {
+        state.gameOver = true;
+        showWinScreen(team1Wins ? 1 : 2);
+      }
+    }
+
+    function showWinScreen(team) {
+      const p1 = getPlayerName(team, 1);
+      const p2 = getPlayerName(team, 2);
+      const winScore = team === 1
+        ? `Final Score: ${state.team1Score} – ${state.team2Score}`
+        : `Final Score: ${state.team2Score} – ${state.team1Score}`;
+      document.getElementById("winTitle").textContent = `Team ${team} Wins!`;
+      document.getElementById("winPlayers").textContent = `${p1} & ${p2}`;
+      document.getElementById("winScore").textContent = winScore;
+      document.getElementById("winOverlay").style.display = "flex";
+      startFireworks();
+    }
+
+    function undoLastPoint() {
+      const previous = history.pop();
+      if (!previous) {
+        statusText.textContent = "No previous score action to undo.";
+        return;
+      }
+
+      state.team1Score = previous.team1Score;
+      state.team2Score = previous.team2Score;
+      state.team1RightPlayer = previous.team1RightPlayer;
+      state.team2RightPlayer = previous.team2RightPlayer;
+      state.servingTeam = previous.servingTeam;
+      state.currentServerPlayer = previous.currentServerPlayer;
+      state.firstServerPlayer = previous.firstServerPlayer;
+      state.initialSingleServerActive = previous.initialSingleServerActive;
+      render();
+      statusText.textContent = previous.statusText || "Restored previous score state.";
+    }
+
+    function getPlayerName(team, playerNum) {
+      const fallback = playerNum === 1 ? "Player 1" : "Player 2";
+      const value = team === 1
+        ? (playerNum === 1 ? team1Player1Input.value : team1Player2Input.value)
+        : (playerNum === 1 ? team2Player1Input.value : team2Player2Input.value);
+      return value.trim() || fallback;
+    }
+
+    function renderCourtView(team) {
+      const rightPlayer = getTeamRightPlayer(team);
+      const leftPlayer = rightPlayer === 1 ? 2 : 1;
+
+      document.getElementById(`team${team}RightName`).textContent = getPlayerName(team, rightPlayer);
+      document.getElementById(`team${team}LeftName`).textContent = getPlayerName(team, leftPlayer);
+
+      const rightServing = state.servingTeam === team && state.currentServerPlayer === rightPlayer;
+      const leftServing = state.servingTeam === team && state.currentServerPlayer === leftPlayer;
+
+      document.getElementById(`team${team}RightSlot`).classList.toggle("is-serving", rightServing);
+      document.getElementById(`team${team}LeftSlot`).classList.toggle("is-serving", leftServing);
+    }
+
+    function render() {
+      let servingScore, receivingScore;
+      if (!state.servingTeam || state.servingTeam === 1) {
+        servingScore = state.team1Score;
+        receivingScore = state.team2Score;
+      } else {
+        servingScore = state.team2Score;
+        receivingScore = state.team1Score;
+      }
+
+      // Server number: 2 before game starts or during initial single-server turn; 1 for first server, 2 for second
+      const serverNum = !state.servingTeam || state.initialSingleServerActive ? 2
+        : state.currentServerPlayer === state.firstServerPlayer ? 1 : 2;
+
+      scoreDisplay.textContent = `${servingScore}-${receivingScore}-${serverNum}`;
+
+      metaText.textContent = state.servingTeam
+        ? `Team ${state.servingTeam} serving | Team ${state.servingTeam === 1 ? 2 : 1} receiving`
+        : "Format: Serving Score - Receiving Score - Server Number";
+
+      serverNameText.textContent = state.servingTeam
+        ? `Current Server: ${getPlayerName(state.servingTeam, state.currentServerPlayer)}`
+        : "";
+
+      renderCourtView(1);
+      renderCourtView(2);
+
+      const serveButtonsLocked = !!state.servingTeam;
+      team1ServeBtn.disabled = serveButtonsLocked;
+      team2ServeBtn.disabled = serveButtonsLocked;
+
+      team1Panel.classList.toggle("serving-turn", state.servingTeam === 1);
+      team2Panel.classList.toggle("serving-turn", state.servingTeam === 2);
+      team1ServeBtn.classList.toggle("current-serve", state.servingTeam === 1);
+      team2ServeBtn.classList.toggle("current-serve", state.servingTeam === 2);
+    }
+
+    function resetGame() {
+      state.team1Score = 0;
+      state.team2Score = 0;
+      state.team1RightPlayer = 1;
+      state.team2RightPlayer = 1;
+      state.servingTeam = null;
+      state.currentServerPlayer = null;
+      state.firstServerPlayer = null;
+      state.initialSingleServerActive = false;
+      state.gameOver = false;
+      history.length = 0;
+      stopFireworks();
+      document.getElementById("winOverlay").style.display = "none";
+      render();
+      statusText.textContent = "Game reset. Select a team to start serving.";
+    }
+
+    render();
+
+    // ── Fireworks ─────────────────────────────────────────────────────────
+    const fwCanvas = document.getElementById("fireworksCanvas");
+    const fwCtx = fwCanvas.getContext("2d");
+    let fwAnimId = null;
+    let fwParticles = [];
+    const FW_COLORS = ["#fde047","#f43f5e","#38bdf8","#a78bfa","#22c55e","#fb923c","#ffffff","#fbbf24"];
+
+    function resizeFwCanvas() {
+      fwCanvas.width = window.innerWidth;
+      fwCanvas.height = window.innerHeight;
+    }
+
+    function makeBurst(x, y) {
+      const color = FW_COLORS[Math.floor(Math.random() * FW_COLORS.length)];
+      const count = 90 + Math.floor(Math.random() * 30);
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 / count) * i + (Math.random() - 0.5) * 0.3;
+        const speed = Math.random() * 5 + 1.5;
+        fwParticles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          alpha: 1,
+          size: Math.random() * 3 + 1,
+          color,
+          decay: Math.random() * 0.015 + 0.008,
+          gravity: 0.07
+        });
+      }
+    }
+
+    function launchRocket() {
+      const x = fwCanvas.width * (0.1 + Math.random() * 0.8);
+      const targetY = fwCanvas.height * (0.1 + Math.random() * 0.35);
+      const dist = fwCanvas.height - targetY;
+      const vy = -Math.sqrt(2 * 0.09 * dist);
+      fwParticles.push({
+        x, y: fwCanvas.height,
+        vx: (Math.random() - 0.5) * 2,
+        vy, targetY,
+        alpha: 1,
+        size: 3,
+        color: FW_COLORS[Math.floor(Math.random() * FW_COLORS.length)],
+        decay: 0.012,
+        gravity: 0.09,
+        isRocket: true,
+        exploded: false
+      });
+    }
+
+    function animateFireworks() {
+      fwCtx.fillStyle = "rgba(2,6,23,0.18)";
+      fwCtx.fillRect(0, 0, fwCanvas.width, fwCanvas.height);
+
+      if (Math.random() < 0.045) launchRocket();
+
+      fwParticles = fwParticles.filter(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += p.gravity;
+        p.alpha -= p.decay;
+
+        if (p.isRocket && !p.exploded && p.y <= p.targetY) {
+          p.exploded = true;
+          makeBurst(p.x, p.y);
+          return false;
+        }
+        if (p.alpha <= 0) return false;
+
+        fwCtx.save();
+        fwCtx.globalAlpha = p.alpha;
+        fwCtx.fillStyle = p.color;
+        fwCtx.beginPath();
+        fwCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        fwCtx.fill();
+        fwCtx.restore();
+        return true;
+      });
+
+      fwAnimId = requestAnimationFrame(animateFireworks);
+    }
+
+    function startFireworks() {
+      resizeFwCanvas();
+      fwParticles = [];
+      fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
+      if (fwAnimId) cancelAnimationFrame(fwAnimId);
+      for (let i = 0; i < 6; i++) setTimeout(launchRocket, i * 180);
+      animateFireworks();
+    }
+
+    function stopFireworks() {
+      if (fwAnimId) { cancelAnimationFrame(fwAnimId); fwAnimId = null; }
+      fwParticles = [];
+    }
+
+    window.addEventListener("resize", () => { if (fwAnimId) resizeFwCanvas(); });
+  </script>
+</body>
+</html>
